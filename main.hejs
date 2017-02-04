@@ -1,0 +1,103 @@
+#include "es5.js"
+#include "he_utils.js"
+#include "he_edit.hejs"
+#include "he_http.hejs"
+
+Application.AddScriptInfo("83A78D1F-30F6-45D7-ACAB-612F8FF30BFE", "JSMinifier", "1.1", "Compress/Minimize your JavaScript code using on-line Google Closure Compiler", "HippoEDIT.com", "supportbox@hippoedit.com", "http://wiki.hippoedit.com/plugins/jsminifier");
+
+//${ region Icons }
+var nIcon = Application.RegisterImageString(
+'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAAclBMVEUAAAAJCQpFiQAvLzELCwwHBwgJ\
+ CQsAAAAAAABDQ0ZFhwCh2gQHBwgfHh5FRUdLiwCp5QBNjgCYvwCXtQAdHR2j4ACc1QCq2RWbzgCv2SG1\
+ 2S+72TyayADA2UjE21TJ3GHU33nZ4IbO3G1DQ0VHR0pRmACRgWKsAAAACnRSTlMA8f//9PL0My3rwnxg\
+ cwAAAJdJREFUGNNFztkOgjAQheGjRQcGKEtB9l3f/xXlNEbaZJL5Lv4MAN3cdgcQHQdgCatbCUYMjCHs\
+ biek55eKsJQL4Zk8gIQwlzMhlBAQwlROBLxhbUQYxsFHDbuEfuwJUrFL6NpOAQZv7EKbtvEgvltkGr9i\
+ LT6IrGVYsvyEvJD/paJ1XKv8Lk1BybkjSAKGKRn361LO630Br7sH3FK7e4cAAAAASUVORK5CYII=');
+//${ endregion }
+
+function createQueryString(textToFormat)
+{
+	return serializeQuery({ js_code : encode_utf8(textToFormat), compilation_level : global_options.compilation_level, output_info : "compiled_code" });
+}
+
+function handleRequest(req) {
+	var sText = req.responseText;
+	if ( global_options.remove_line_breaks ) sText = sText.replace(/[\n\r]+/gm, '');
+	if ( !sText || !sText.replace(/^\s+|\s+$/g, '').length)
+	{
+		status("Error during processing", eMessageTypeError);
+	}
+	else
+	{
+		var sel = ActiveView.Selection;
+		if (sel.IsEmpty) sel = new Range(0, 0, ActiveDocument.LineCount - 1, ActiveDocument.GetLineLength(ActiveDocument.LineCount - 1));
+		ActiveView.Position = ActiveDocument.ReplaceText(sel, sText, AddUndoActionType("Minify JavaScript"));		
+	}
+}
+
+var vCommand = new Command("JSMinifier.Compile", "Minify JavaScript", "Minify selected JS code or complete document", nIcon);
+vCommand.onExecute = function() {
+	var sel = ActiveView.Selection;
+
+	// if there is no selection, take current word range as selection
+	if ( sel.IsEmpty )
+		sel = new Range(0, 0, ActiveDocument.LineCount - 1, ActiveDocument.GetLineLength(ActiveDocument.LineCount - 1));
+
+	var textToFormat = ActiveDocument.GetText(sel);
+	if ( textToFormat !== "" )
+		sendRequest("http://closure-compiler.appspot.com/compile", handleRequest, createQueryString(textToFormat));
+};
+
+vCommand.onEnabled = function() {
+	return ActiveDocument !== null && ActiveDocument.ReadOnly !== true && CurrentSyntax().IsInheritedFrom("js");
+};
+
+Application.RegisterCommand(vCommand);
+
+var compilation_levels = ["WHITESPACE_ONLY", "SIMPLE_OPTIMIZATIONS", "ADVANCED_OPTIMIZATIONS"];
+var global_options = {};
+
+Application.onWorkspaceOpen = function (bSaveState) {
+	global_options = {
+		compilation_level 	 : readStorage("compilation_level", "WHITESPACE_ONLY"),
+		remove_line_breaks	 : readStorage("remove_line_breaks", false)
+	};
+}
+
+////////////////////////////////////////////////////////////////////////
+// Initialize Toolbar
+Application.onInitToolbars = function (){
+	var MyToolbar = this.GetToolBar("JSMinifier", true);
+	MyToolbar.Name = "JSMinifier";
+	MyToolbar.AddButton(vCommand);
+}
+
+function onOptionsInit()
+{
+	// read "setting" from persistent storage
+	this.Parameters.compilation_level  =  find(compilation_levels, global_options.compilation_level);
+	this.Parameters.remove_line_breaks =  global_options.remove_line_breaks;
+
+	this.Layout =
+	'@<dialog> \
+		<group> \
+			<paragraph text="Optimization:" align="left"/> \
+			<combobox id="compilation_level"> \
+				<item text="Whitespace Only"/> \
+				<item text="Simple"/> \
+				<item text="Advanced"/> \
+			</combobox> \
+		</group> \
+		<checkbox title="Remove Line Breaks" id="remove_line_breaks"/> \
+	</dialog>@';
+}
+
+function onOptionsApply()
+{
+	// store new "setting" value in persistent storage
+	var vStorage = GetStorage(eStorageTypeWorkspace, "", eAccessTypeWrite);
+	vStorage.compilation_level  = global_options.compilation_level = compilation_levels[this.Parameters.compilation_level];
+	vStorage.remove_line_breaks = global_options.remove_line_breaks = this.Parameters.remove_line_breaks;
+}
+
+Application.RegisterOptionsPage("JSMinifier", onOptionsInit, onOptionsApply);

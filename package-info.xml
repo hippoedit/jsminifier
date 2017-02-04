@@ -1,0 +1,22 @@
+<?xml version="1.0"?>
+<!DOCTYPE package-info SYSTEM "http://www.hippoedit.com/xml/package-info">
+<package-info xmlns="http://www.hippoedit.com/xml/package-info" xmlns:smf="http://www.hippoedit.com/">
+	<id>83A78D1F-30F6-45D7-ACAB-612F8FF30BFE</id>
+	<name>JSMinifier</name>
+	<version>1.1</version>
+	<description>Compress/Minimize your JavaScript code using online Google Closure Compiler</description>
+	<author>HippoEDIT.com</author>
+	<email>supportbox@hippoedit.com</email>
+	<homepage>http://wiki.hippoedit.com/plugins/jsminifier</homepage>
+	<memo></memo>
+	<install>
+		<readme type="inline">This will install JSMinifier plugin for HippoEDIT.</readme>
+		<require-file name="main.hejs" destination="%{plugins}%/jsminifier/main.hejs" />
+		<install-plugin path="%{plugins}%/jsminifier/main.hejs"/>
+	</install>
+	<uninstall>
+		<readme type="inline">This will uninstall JSMinifier plugin for HippoEDIT.</readme>
+		<uninstall-plugin id="83A78D1F-30F6-45D7-ACAB-612F8FF30BFE"/>
+		<remove-dir name="%{plugins}%/jsminifier" />
+	</uninstall>
+</package-info>
